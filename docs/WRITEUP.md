@@ -6,7 +6,7 @@
 |---|---|
 | **Live app** | https://receipts-bnb.vercel.app |
 | **Repository** | https://github.com/Akinbola247/receipts-bnb (README has setup instructions) |
-| **Demo video (2:33)** | _add link_ |
+| **Demo video (2:33)** | https://youtu.be/DNgTSeCa1zc |
 | **Network** | BNB Smart Chain Testnet (chainId 97) |
 | **RECEIPTS Diamond** | [`0xcAe4378872F3072A11489A69Fe075681701aed0B`](https://testnet.bscscan.com/address/0xcAe4378872F3072A11489A69Fe075681701aed0B), source-verified on [Sourcify](https://repo.sourcify.dev/97/0xcAe4378872F3072A11489A69Fe075681701aed0B) (exact match) |
 | **Tracks entered** | Developer Track (Build on BNB Chain) · CoinMarketCap × Atlas Challenge · Cournot Intelligence Oracle |
