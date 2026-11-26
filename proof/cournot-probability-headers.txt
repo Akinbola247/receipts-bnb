@@ -1,0 +1,14 @@
+HTTP/2 200 
+content-type: application/json
+access-control-allow-credentials: true
+access-control-allow-headers: Content-Type,Recaptcha-Token,X-Token,PlatformX-Requested-With,Access-Control-Allow-Credentials,User-Agent,Content-Length,Authorization,Locale,Source
+access-control-allow-methods: GET,POST,OPTIONS,PUT,PATCH,DELETE
+access-control-expose-headers: Content-Length,X-Token
+strict-transport-security: max-age=31536000
+x-trace-id: cc3df7b8bd854896e9155b2986f9ff49
+server: TencentEdgeOne
+content-length: 1574
+date: Thu, 26 Nov 2026 21:28:33 GMT
+eo-log-uuid: 17105901197233226885
+eo-cache-status: MISS
+
