@@ -31,7 +31,7 @@ type StepState = "idle" | "run" | "done" | "error" | "skip";
 
 const STEPS: { key: StepKey; title: string; sub: string }[] = [
   { key: "resolve", title: "Match a live prediction market", sub: "Cournot · /resolve" },
-  { key: "odds", title: "Ask the Intelligence Oracle", sub: "Cournot · /probability (from your browser)" },
+  { key: "odds", title: "Ask the Intelligence Oracle", sub: "Cournot · /probability" },
   { key: "market", title: "Pull live market context", sub: "CoinMarketCap Pro API" },
   { key: "anchor", title: "Anchor the receipt on BNB Chain", sub: "ReceiptRegistry · gas sponsored" },
 ];
@@ -260,7 +260,7 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
                   />
                 </div>
                 <p className="mt-2 text-xs text-white/40">
-                  Everyone gets free odds checks from Cournot. The key is only used if you run out. It never touches our server.
+                  Only needed if the shared oracle quota runs out. It is forwarded to Cournot with your request and never stored.
                 </p>
               </motion.div>
             )}
@@ -301,8 +301,8 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
             <div className="font-semibold text-bad">{error.msg}</div>
             {error.kind === "quota" && (
               <p className="mt-1 text-white/65">
-                Your network has used its free Cournot checks and nobody has checked this market in the last 6 hours. Add a Cournot key
-                above, try another network, or{" "}
+                The shared Cournot quota is used up and nobody has checked this market in the last 6 hours. Add your own Cournot key
+                above, or{" "}
                 <Link href="/ledger" className="text-bnb underline">
                   browse existing receipts
                 </Link>
@@ -362,7 +362,7 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
                   <p className="mt-3 text-lg text-white/85">{VERDICTS[verdict].action}</p>
                   {odds.data.free_quota && (
                     <p className="mt-3 font-mono text-[11px] text-white/35">
-                      {odds.data.free_quota.remaining} free Cournot checks left on your network
+                      {odds.data.free_quota.remaining} free Cournot checks left in the shared quota
                     </p>
                   )}
                   {fromCache && (

@@ -1,8 +1,9 @@
-// Cournot Intelligence Oracle client.
-// Called DIRECTLY from the user's browser (Cournot sends permissive CORS headers),
-// so every visitor uses their own free quota — our backend never spends money.
+// Cournot Intelligence Oracle client (browser side).
+// Cournot rejects browser-originated requests, so calls go through our thin server proxy
+// (/api/cournot/*), which adds the partner key, redacts the IP and memoises results.
 
-export const COURNOT_BASE = "https://interface.cournot.ai/intelligence/v1";
+export const COURNOT_BASE = "https://interface.cournot.ai/intelligence/v1"; // upstream (server use)
+const PROXY = "/api/cournot";
 
 export type CournotMarket = {
   market_info: {
@@ -44,12 +45,12 @@ export class CournotError extends Error {
 
 function headers(apiKey?: string) {
   const h: Record<string, string> = { "content-type": "application/json" };
-  if (apiKey) h["COURNOT-API-KEY"] = apiKey;
+  if (apiKey) h["x-cournot-key"] = apiKey; // forwarded per-request by the proxy, never stored
   return h;
 }
 
 export async function resolveMarkets(message: string, limit = 5): Promise<CournotMarket[]> {
-  const res = await fetch(`${COURNOT_BASE}/resolve`, {
+  const res = await fetch(`${PROXY}/resolve`, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({ message, limit }),
@@ -77,12 +78,12 @@ export async function getProbability(
   marketIds: number[],
   apiKey?: string,
 ): Promise<{ parsed: CournotProbability; raw: string }> {
-  const res = await fetch(`${COURNOT_BASE}/probability`, {
+  const res = await fetch(`${PROXY}/probability`, {
     method: "POST",
     headers: headers(apiKey),
     body: JSON.stringify({ message, market_ids: marketIds }),
   });
-  if (res.status === 402) throw new CournotError("quota", "Free Cournot quota for your network is used up.");
+  if (res.status === 402) throw new CournotError("quota", "The shared Cournot oracle quota is used up.");
   if (res.status === 429) throw new CournotError("rate_limited", "Cournot is rate limiting. Try again in a minute.");
   if (res.status === 401) throw new CournotError("key_invalid", "That Cournot API key was rejected.");
   const raw = redactEvidence(await res.text());

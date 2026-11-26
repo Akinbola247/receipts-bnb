@@ -5,7 +5,7 @@
 > Built at **BNB Bangkok 2026** · Developer Track (on-chain AI agents) · CoinMarketCap × Atlas Challenge · Cournot Intelligence Oracle
 
 - **Live app:** _add deployed URL_
-- **Diamond (BSC Testnet):** _add address after deploy_ · [BscScan](https://testnet.bscscan.com)
+- **Diamond (BSC Testnet, chainId 97):** [`0xcAe4378872F3072A11489A69Fe075681701aed0B`](https://testnet.bscscan.com/address/0xcAe4378872F3072A11489A69Fe075681701aed0B) · source verified ([Sourcify, exact match](https://repo.sourcify.dev/97/0xcAe4378872F3072A11489A69Fe075681701aed0B))
 - **Demo video (≤3 min):** _add link_
 
 ---
@@ -41,10 +41,10 @@ Crypto runs on unaccountable price calls. "BNB to $1,000 by January" gets posted
 ## Architecture
 
 ```
-Browser ──(CORS, user's own free quota)──▶ Cournot /resolve + /probability
-   │                                            │ raw JSON (IP redacted)
-   ▼                                            ▼
-Next.js API ──▶ re-verifies market on Cournot ──▶ CoinMarketCap snapshot (server-side key, cached)
+Browser ──▶ Next.js /api/cournot/* proxy ──▶ Cournot /resolve + /probability
+                 │ memo · partner key · IP redaction
+                 ▼
+Next.js /api/anchor ──▶ re-verifies market on Cournot ──▶ CoinMarketCap snapshot (server-side key, cached)
    │
    ▼  relayer (gas-sponsored)            or   anyone, via EIP-712 anchorWithSig
 RECEIPTS Diamond (EIP-2535) on BSC ──▶ evidence JSON in event log + keccak256 in state
@@ -73,11 +73,27 @@ One permanent address, upgradeable facets, **namespaced diamond storage** (`kecc
 - **Market-relative alpha.** HIT → `+(10000 − p)`, MISS → `−p`. A caller who only repeats consensus converges to 0. Positive alpha means you were right when the market thought you were wrong.
 - **Input bounds** (claim ≤ 280 B, handle ≤ 32 B, evidence ≤ 16 KB), custom errors throughout, and a bounded `settleMarket(maxCount)`.
 
+**Deployed facets (BSC Testnet):**
+
+| Contract | Address |
+|---|---|
+| **Diamond** | `0xcAe4378872F3072A11489A69Fe075681701aed0B` |
+| DiamondCutFacet | `0x822BC44CeAb1cbc03182C45107908d4676c802E2` |
+| DiamondLoupeFacet | `0x9007D250e798aED178040a4e27b76797ba329153` |
+| OwnershipFacet | `0x3eEd5cE4DE7CfB5f241799DE96F598F4837366DE` |
+| ReceiptFacet | `0xaC2CDDA4CE743b98A0b46CE79149AeddE16DBa18` |
+| SettlementFacet | `0xEDB26A4C5C4a151ddF77f1Eb87Dd648e5c7B52c7` |
+| LedgerFacet | `0x84886Cd155801F0757418d3c66dA7c5c793Cd36d` |
+| AdminFacet | `0x4134425e3F904599Ac50305dd5107A8eD55D5095` |
+| ReceiptsInit | `0x4d7C4DE4Fd8849041f881E3552Ad98aea65291AB` |
+
+First receipts: [#0](https://testnet.bscscan.com/tx/0x81d51e13a04954466c11a85659741a2a167d0191f13babee045e273277ee95ad) and [#1](https://testnet.bscscan.com/tx/0xe7abd8273b4459a93580965b1cb60e38e2bed4a7a5a8b6026e8b2ae2acbaa072).
+
 **Tests:** `cd contracts && forge test`. **21 tests**, including fuzzing, cover: loupe and ERC-165, unknown selectors, re-init guard, **upgrade keeps receipts** (replace with `LedgerFacetV2`), function removal, owner-only cuts, anchoring and indexes, batch, attester and pause guards, input validation, **EIP-712 permissionless submit / replay / expiry / wrong signer / tampered payload**, alpha math, settle timing and double-settle, `settleMarket`, and a fuzzed verdict-threshold invariant.
 
 ### Zero-cost by design
 
-- **Cournot is called from each visitor's browser** (Cournot serves permissive CORS), so each user spends their own free quota and our backend never pays.
+- **One oracle query serves many users.** Cournot rejects browser-originated calls, so a thin server proxy (`/api/cournot/*`) memoises answers for 10 minutes and supports a server-side partner key (`COURNOT_API_KEY`) or a user-supplied key (forwarded per request, never stored).
 - **The chain is the cache.** If anyone checked the same market in the last 6 hours, `/api/cache` serves that anchored, verifiable answer.
 - **CoinMarketCap** runs server-side only, with in-memory and ISR caching to stay inside the free Basic plan.
 - **BSC testnet gas** is ~0.1 gwei. A receipt costs ~0.00004 tBNB, sponsored by the relayer.
@@ -99,7 +115,7 @@ One permanent address, upgradeable facets, **namespaced diamond storage** (`kecc
 **Where and how it calls Cournot** (`web/src/lib/cournot.ts`, invoked from `web/src/components/CheckFlow.tsx`):
 
 1. `POST https://interface.cournot.ai/intelligence/v1/resolve` with `{ message: <the call>, limit: 5 }` → candidate markets with `matching_confidence`. The top match is used, and the alternatives are shown so the user can switch.
-2. `POST https://interface.cournot.ai/intelligence/v1/probability` with `{ message, market_ids: [id] }`, sent **from the user's browser**. An optional user-supplied `COURNOT-API-KEY` is kept in localStorage and never sent to our server.
+2. `POST https://interface.cournot.ai/intelligence/v1/probability` with `{ message, market_ids: [id] }`. Both calls go through our proxy (`web/src/app/api/cournot/*`), because Cournot rejects browser-originated requests. The proxy adds `COURNOT-API-KEY` (server env, or a user key forwarded per request), redacts `free_quota.ip`, and memoises the response.
 3. Server-side integrity check: `web/src/app/api/anchor/route.ts` re-calls `/resolve` with the market title and confirms the market id exists before anchoring.
 
 **How the probability is used.** `data.probability` → basis points → **the on-chain verdict** (`LibReceipts.verdictFor`) → the action ("Do not follow this call", "Half size at most", …) and position-sizing guidance → the caller's **average odds** and, once resolved, their **alpha score**. Nothing is mocked or hardcoded. If Cournot is unreachable or the quota is exhausted with no fresh on-chain cache, **no receipt is created**.

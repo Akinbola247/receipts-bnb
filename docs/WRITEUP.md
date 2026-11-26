@@ -23,7 +23,7 @@ Keys stay server-side and responses are cached (free Basic plan). Usage is verif
 
 ## BNB Chain
 - **Network:** BSC Testnet (chainId 97)
-- **RECEIPTS Diamond (EIP-2535):** `_address_`
+- **RECEIPTS Diamond (EIP-2535):** `0xcAe4378872F3072A11489A69Fe075681701aed0B` (source verified on Sourcify)
 - **Facets:** Cut, Loupe, Ownership, Receipt (incl. EIP-712 `anchorWithSig`), Settlement (market-relative alpha), Ledger, Admin
 - **Tests:** 21 Foundry tests, including fuzzing
 

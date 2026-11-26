@@ -47,9 +47,9 @@ export default async function HowPage() {
         <div className="card mt-12 overflow-x-auto p-6 md:p-10">
           <div className="grid min-w-[760px] grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-stretch gap-3">
             {[
-              { t: "Browser", s: ["Paste call + @handle", "Calls Cournot directly", "(own free quota, CORS)"] },
+              { t: "Browser", s: ["Paste call + @handle", "No wallet, no gas", "Optional own Cournot key"] },
               { t: "Cournot Oracle", s: ["/resolve → market id", "/probability → p + basis", "Kalshi · Binance · venues"] },
-              { t: "RECEIPTS API", s: ["Validates response", "Re-verifies market (free)", "CoinMarketCap snapshot"] },
+              { t: "RECEIPTS API", s: ["Cournot proxy + memo + IP redaction", "Re-verifies market (free)", "CoinMarketCap snapshot"] },
               { t: "BNB Chain Diamond", s: ["ReceiptFacet.anchor", "evidence JSON in event log", "keccak256 stored in state"] },
             ].map((b, i, arr) => (
               <Fragment key={b.t}>
@@ -78,7 +78,7 @@ export default async function HowPage() {
         {[
           {
             t: "Zero-cost by design",
-            d: "Cournot is called from each visitor's browser, so everyone uses their own free quota. Results anchored in the last 6h are reused from the chain: the ledger is the cache. Gas on BSC is ~0.1 gwei and sponsored.",
+            d: "Every oracle answer is memoised and anchored, and answers anchored in the last 6h are reused straight from the chain, so the ledger is the cache. One Cournot query can serve thousands of visitors. CoinMarketCap is cached server-side, and BSC gas is ~0.1 gwei and sponsored.",
           },
           {
             t: "Tamper-evident",
