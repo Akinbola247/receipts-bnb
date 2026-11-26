@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { REGISTRY_ADDRESS } from "@/lib/config";
 
 export function Footer() {
-  const reg = process.env.NEXT_PUBLIC_REGISTRY_ADDRESS;
+  const reg = REGISTRY_ADDRESS;
   return (
     <footer className="relative mt-32 border-t border-line/70">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr]">

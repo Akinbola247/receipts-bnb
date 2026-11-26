@@ -85,7 +85,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ id, txHash, snapshot: snap });
   } catch (e) {
     const msg = (e as Error).message || "";
-    const friendly = /insufficient funds/i.test(msg) ? "Relayer is out of testnet gas — try again shortly." : "On-chain anchoring failed.";
+    const friendly = /insufficient funds/i.test(msg)
+      ? "Relayer is out of testnet gas — try again shortly."
+      : /Relayer not configured/.test(msg)
+        ? "Server is missing RELAYER_PRIVATE_KEY."
+        : /NotAttester/.test(msg)
+          ? "Relayer key is not an authorised attester on the Diamond."
+          : "On-chain anchoring failed.";
     console.error("anchor failed", msg);
     return NextResponse.json({ error: friendly }, { status: 502 });
   }

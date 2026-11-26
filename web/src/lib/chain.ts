@@ -4,9 +4,10 @@ import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 import { registryAbi } from "./abi";
 import { verdictFromIndex, type VerdictKey } from "./verdict";
+import { REGISTRY_ADDRESS } from "./config";
 
-export const REGISTRY = (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "0x0000000000000000000000000000000000000000") as Hex;
-const RPC = process.env.BSC_TESTNET_RPC || "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+export const REGISTRY = REGISTRY_ADDRESS;
+const RPC = (process.env.BSC_TESTNET_RPC || "").trim() || "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
 
 export const publicClient = createPublicClient({ chain: bscTestnet, transport: http(RPC, { retryCount: 2 }) });
 
@@ -191,8 +192,9 @@ export type AnchorArgs = {
 /** Serialised so concurrent requests never collide on nonces. */
 export function anchorReceipt(a: AnchorArgs): Promise<{ txHash: Hex; id: number }> {
   const run = async () => {
-    const pk = process.env.RELAYER_PRIVATE_KEY as Hex | undefined;
-    if (!pk) throw new Error("Relayer not configured");
+    const rawPk = (process.env.RELAYER_PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, "");
+    if (!rawPk) throw new Error("Relayer not configured");
+    const pk = (rawPk.startsWith("0x") ? rawPk : `0x${rawPk}`) as Hex;
     const account = privateKeyToAccount(pk);
     const wallet = createWalletClient({ account, chain: bscTestnet, transport: http(RPC) });
     const args = {
