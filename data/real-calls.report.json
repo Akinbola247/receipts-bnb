@@ -1,0 +1,41 @@
+{
+  "anchored": [],
+  "skipped": [
+    {
+      "tag": "@stanchart · Solana will be at $135 by the end of 2026",
+      "why": "no exact market (top: Solana price above $140.00 at any time before 2027-01-01 05:00 UTC)"
+    },
+    {
+      "tag": "@stanchart · BNB will be at $1,050 by the end of 2026",
+      "why": "no exact market (top: BNB price above $1,100 at any time before 2027-01-01 05:00 UTC)"
+    },
+    {
+      "tag": "@stanchart · BNB will reach $2,775 by the end of 2028",
+      "why": "no exact market (top: BNB price above $2,000 at any time before 2027-01-01 05:00 UTC)"
+    },
+    {
+      "tag": "@bernstein.research · Bitcoin will return to around $125,000 by the end of 2026",
+      "why": "no exact market (top: Bitcoin price above $130,000 at any time before 2027-01-01 04:59 UTC)"
+    },
+    {
+      "tag": "@CryptoHayes · Bitcoin will reach around $125,000 by the end of 2026",
+      "why": "no exact market (top: Bitcoin price above $130,000 at any time before 2027-01-01 04:59 UTC)"
+    },
+    {
+      "tag": "@fundstrat.farrell · Bitcoin will be at $115,000 by the end of 2026",
+      "why": "no exact market (top: Bitcoin price above $120,000 at any time before 2027-01-01 04:59 UTC)"
+    },
+    {
+      "tag": "@CathieDWood · Bitcoin will reach about $750,000 by 2030 (ARK base case)",
+      "why": "no exact market (top: Bitcoin price above $1,000,000 at any time before 2027-01-01 05:00 UTC)"
+    },
+    {
+      "tag": "@Matt_Hougan · Bitcoin will reach $1.6 million by 2036",
+      "why": "no exact market (top: Bitcoin price above $1,000,000 at any time before 2027-01-01 05:00 UTC)"
+    },
+    {
+      "tag": "@saylor · Bitcoin will reach $21 million within 21 years (by about 2046)",
+      "why": "no exact market (top: Bitcoin price above $82,500 at any time before 2026-12-01 04:59 UTC)"
+    }
+  ]
+}

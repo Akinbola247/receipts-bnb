@@ -52,8 +52,11 @@ function matches(call, market) {
   if (!p) return false;
   if (Math.abs(p.target - call.target) / call.target > 0.02) return false;
   if ((call.direction || "above") !== p.direction) return false;
-  // market must not end before the call's own deadline window starts being meaningful
-  return new Date(market.market_info.end_time).getTime() > Date.now();
+  const end = new Date(market.market_info.end_time).getTime();
+  if (!(end > Date.now())) return false;
+  // a market that closes before the call's deadline understates the call: never usable
+  if (call.deadline && end < Date.parse(call.deadline) - 10 * 86400e3) return false;
+  return true;
 }
 
 const calls = JSON.parse(fs.readFileSync(file, "utf8")).filter((c) => c.verified !== false);

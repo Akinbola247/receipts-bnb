@@ -8,6 +8,7 @@ import { VerdictPill } from "@/components/ReceiptCard";
 import { VERDICTS, contextNotes } from "@/lib/verdict";
 import { day, pct, receiptNo, sourceLabel, stamp } from "@/lib/format";
 import type { CournotProbability } from "@/lib/cournot";
+import { matchMarket, modeLabel } from "@/lib/match";
 
 export const revalidate = 30;
 
@@ -34,6 +35,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   } catch {}
   const market = parsed?.data?.markets?.find((m) => m.market_info.id === r.marketId) ?? parsed?.data?.markets?.[0];
   const notes = contextNotes({ fearGreed: r.fearGreed, bps: r.probabilityBps });
+  const mm = market ? matchMarket(r.claim, [market]) : null;
+  const bound = Boolean(mm && mm.ok && mm.mode === "bound");
 
   return (
     <div className="mx-auto max-w-7xl px-5 pt-14">
@@ -48,6 +51,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               ...r,
               marketTitle: market?.market_info.title,
               txHash: ev?.txHash,
+              bound,
             }}
           />
         </div>
@@ -65,6 +69,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               </Link>{" "}
               · anchored {stamp(r.createdAt)} · prediction markets priced it at{" "}
               <span className="font-bold" style={{ color: VERDICTS[r.verdict].color }}>
+                {bound ? "≤ " : ""}
                 {pct(r.probabilityBps, 1)}
               </span>
             </p>
@@ -112,6 +117,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                     <div className="font-mono text-[11px] text-white/40">CLAIM EVALUATED · MARKET #{market.market_info.id}</div>
                     <div className="mt-1 font-semibold">{market.market_info.title}</div>
                     <div className="mt-1 font-mono text-xs text-white/45">probability {parsed.data.probability}</div>
+                    {mm && mm.ok && (
+                      <div className={`mt-2 inline-block rounded-md px-2 py-1 text-xs ${bound ? "bg-[#5ac8fa]/10 text-[#5ac8fa]" : "bg-good/10 text-good"}`}>
+                        {modeLabel(mm.mode, mm.marketTarget)}
+                      </div>
+                    )}
                   </div>
                 )}
                 <ul className="mt-4 space-y-3">
