@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Import a public X post (author, text, timestamp) so a call can be checked straight from its link.
 // Uses the free, keyless FxTwitter API; nothing is stored server-side.
-const RE = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{5,25})/i;
+const RE = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{1,25})/i;
 
 export async function GET(req: Request) {
   const url = new URL(req.url).searchParams.get("url")?.trim() ?? "";
