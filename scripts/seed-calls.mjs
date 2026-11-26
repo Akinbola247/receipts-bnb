@@ -72,7 +72,20 @@ for (const c of calls) {
       console.log("SKIP", tag, "→ resolve", j.msg);
       continue;
     }
-    const market = j.data.markets.find((m) => matches(c, m));
+    let market = j.data.markets.find((m) => matches(c, m));
+    if (!market) {
+      // upper bound: same asset/direction/timely, but an EASIER threshold (above: lower; below: higher)
+      const dir = c.direction || "above";
+      const cands = j.data.markets
+        .filter((m) => matches({ ...c, target: parseTitle(m.market_info.title)?.target ?? -1 }, m))
+        .map((m) => ({ m, t: parseTitle(m.market_info.title).target }))
+        .filter((x) => (dir === "above" ? x.t < c.target : x.t > c.target))
+        .sort((a, b) => (dir === "above" ? b.t - a.t : a.t - b.t));
+      if (cands[0]) {
+        market = cands[0].m;
+        console.log("BOUND", tag, "→ via", market.market_info.title);
+      }
+    }
     if (!market) {
       report.skipped.push({ tag, why: `no exact market (top: ${j.data.markets[0]?.market_info.title})` });
       console.log("SKIP", tag, "→ no exact market; top was:", j.data.markets[0]?.market_info.title);

@@ -34,7 +34,9 @@ Crypto runs on unaccountable price calls. "BNB to $1,000 by January" gets posted
 | `/r/[id]` | Receipt page: Cournot evidence, our analysis (labelled), **in-browser keccak256 verification** against chain state |
 | `/hall` | Hall of Hype: callers ranked by delusion (avg odds), alpha, or volume |
 | `/caller/[handle]` | Caller record: stats, verdict mix, all receipts |
-| `/how` | Architecture: renders the Diamond's **live loupe** (facets → selectors) plus the trust and cost model |
+| `/explorer` | **On-chain explorer**: every Diamond event decoded (receipts, source links, settlements, facet cuts), upgrade timeline, relayer gas |
+| `/explorer/tx/[hash]` | Decoded transaction: method, arguments, gas and fee, emitted events, link to the receipt |
+| `/how` | Architecture: renders the Diamond's **live loupe** (facets → selectors), the intake pipeline, and the trust and cost model |
 
 ---
 
@@ -63,6 +65,7 @@ One permanent address, upgradeable facets, **namespaced diamond storage** (`kecc
 | `SettlementFacet` | `settle`, `settleMarket` (bounded batch), updates **alpha** |
 | `LedgerFacet` | Paged reads, per-caller / per-market indexes, `verifyEvidence` |
 | `AdminFacet` | Attester registry, circuit breaker (`setPaused`), `nonces`, `DOMAIN_SEPARATOR` |
+| `SourceFacet` | **Added by a live `diamondCut`** after launch. `anchorWithSource`, write-once `linkSource`, `sourceOf`/`sourcesOf`. Own storage namespace `receipts.sources.storage.v1`; https-only URLs; no future post dates |
 | `ReceiptsInit` | One-shot initializer (interfaces, attesters, cached EIP-712 domain) |
 
 **Design details**
@@ -86,10 +89,11 @@ One permanent address, upgradeable facets, **namespaced diamond storage** (`kecc
 | LedgerFacet | `0x84886Cd155801F0757418d3c66dA7c5c793Cd36d` |
 | AdminFacet | `0x4134425e3F904599Ac50305dd5107A8eD55D5095` |
 | ReceiptsInit | `0x4d7C4DE4Fd8849041f881E3552Ad98aea65291AB` |
+| SourceFacet (upgrade 1) | `0x21EC0B60Ba73915c5d2ff8F92F694A2Be9Ff3248` · cut tx `0x4d2bcc75…68cdcf` |
 
 First receipts: [#0](https://testnet.bscscan.com/tx/0x81d51e13a04954466c11a85659741a2a167d0191f13babee045e273277ee95ad) and [#1](https://testnet.bscscan.com/tx/0xe7abd8273b4459a93580965b1cb60e38e2bed4a7a5a8b6026e8b2ae2acbaa072).
 
-**Tests:** `cd contracts && forge test`. **21 tests**, including fuzzing, cover: loupe and ERC-165, unknown selectors, re-init guard, **upgrade keeps receipts** (replace with `LedgerFacetV2`), function removal, owner-only cuts, anchoring and indexes, batch, attester and pause guards, input validation, **EIP-712 permissionless submit / replay / expiry / wrong signer / tampered payload**, alpha math, settle timing and double-settle, `settleMarket`, and a fuzzed verdict-threshold invariant.
+**Tests:** `cd contracts && forge test`. **25 tests** (21 core + 4 for the SourceFacet upgrade path), including fuzzing, cover: loupe and ERC-165, unknown selectors, re-init guard, **upgrade keeps receipts** (replace with `LedgerFacetV2`), function removal, owner-only cuts, anchoring and indexes, batch, attester and pause guards, input validation, **EIP-712 permissionless submit / replay / expiry / wrong signer / tampered payload**, alpha math, settle timing and double-settle, `settleMarket`, and a fuzzed verdict-threshold invariant.
 
 ### Zero-cost by design
 
@@ -107,6 +111,22 @@ First receipts: [#0](https://testnet.bscscan.com/tx/0x81d51e13a04954466c11a85659
 - UI copy: *an assessment of prediction-market pricing, not investment advice.*
 
 ---
+
+## Honest matching: we never price a different bet
+
+A market prices one specific event ("STRK above $0.30 before 2027"); a call is often a different one ("STRK to $5 by December"). `web/src/lib/match.ts` (shared by browser and server, enforced in `/api/anchor`) parses the call's **asset, target, direction and deadline**:
+
+| Case | Result |
+|---|---|
+| Same asset, direction, threshold ±2%, same deadline (±45d) | **Exact**: the market's p is the call's p |
+| Easier market: lower target (bullish), longer window, or "touch at any time" vs a close | **Upper bound**: shown as **≤ p** |
+| Market closes **before** the call's deadline, other asset, or no bounding market | **Refused**: no receipt |
+
+## How calls get in
+
+1. **Anyone at `/check`**: type any call, or **paste an X post link** to import the text, author, date and link (FxTwitter, keyless). No wallet, no gas.
+2. **Curated batch import**: `BASE=… node scripts/seed-calls.mjs data/real-calls.json` runs verified public calls (`data/real-calls.json`: claim, author, source URL, post date) through the same pipeline. Calls without a defensible market are skipped and logged in `data/real-calls.report.json`.
+3. **Permissionless**: any wallet can submit an attester-signed EIP-712 receipt (`anchorWithSig`).
 
 ## Cournot Integration
 
