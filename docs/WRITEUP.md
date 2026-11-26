@@ -1,5 +1,7 @@
 # RECEIPTS: one-page write-up (CoinMarketCap × Atlas Challenge)
 
+**Live app:** https://receipts-bnb.vercel.app · **Repo:** https://github.com/Akinbola247/receipts-bnb
+
 **Team:** _names + contacts_
 
 ## Problem and audience

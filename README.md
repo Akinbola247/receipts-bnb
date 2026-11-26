@@ -4,7 +4,7 @@
 
 > Built at **BNB Bangkok 2026** · Developer Track (on-chain AI agents) · CoinMarketCap × Atlas Challenge · Cournot Intelligence Oracle
 
-- **Live app:** _add deployed URL_
+- **Live app:** https://receipts-bnb.vercel.app
 - **Diamond (BSC Testnet, chainId 97):** [`0xcAe4378872F3072A11489A69Fe075681701aed0B`](https://testnet.bscscan.com/address/0xcAe4378872F3072A11489A69Fe075681701aed0B) · source verified ([Sourcify, exact match](https://repo.sourcify.dev/97/0xcAe4378872F3072A11489A69Fe075681701aed0B))
 - **Demo video (≤3 min):** _add link_
 

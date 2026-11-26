@@ -6,11 +6,12 @@ import { getEvidence, getLatest } from "@/lib/chain";
 export async function GET(req: Request) {
   const marketId = Number(new URL(req.url).searchParams.get("marketId"));
   if (!marketId) return NextResponse.json({ hit: null });
-  const rows = await getLatest(0, 200);
+  const rows = await getLatest(0, 200).catch(() => []);
   const sixHours = 6 * 3600;
   const now = Math.floor(Date.now() / 1000);
   const hit = rows.find((r) => r.marketId === marketId && now - r.createdAt < sixHours);
   if (!hit) return NextResponse.json({ hit: null });
-  const ev = await getEvidence(hit);
+  const ev = await getEvidence(hit).catch(() => null);
+  if (!ev) return NextResponse.json({ hit: null });
   return NextResponse.json({ hit, raw: ev?.json ?? null, txHash: ev?.txHash ?? null });
 }

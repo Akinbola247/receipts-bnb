@@ -1,5 +1,5 @@
 import "server-only";
-import { createPublicClient, createWalletClient, http, keccak256, toBytes, type Hex } from "viem";
+import { createPublicClient, createWalletClient, fallback, http, keccak256, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 import { registryAbi } from "./abi";
@@ -7,9 +7,18 @@ import { verdictFromIndex, type VerdictKey } from "./verdict";
 import { REGISTRY_ADDRESS } from "./config";
 
 export const REGISTRY = REGISTRY_ADDRESS;
-const RPC = (process.env.BSC_TESTNET_RPC || "").trim() || "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+const ENV_RPC = (process.env.BSC_TESTNET_RPC || "").trim();
+// The official BNB testnet RPC rejects eth_getLogs ("limit exceeded"), so log-capable public
+// endpoints go first; viem's fallback transport fails over (and ranks) automatically.
+const RPCS = [
+  "https://bsc-testnet-rpc.publicnode.com",
+  "https://bsc-testnet.drpc.org",
+  ...(ENV_RPC ? [ENV_RPC] : []),
+  "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+].filter((v, i, a) => a.indexOf(v) === i);
+const transport = () => fallback(RPCS.map((u) => http(u, { retryCount: 1, timeout: 12_000 })));
 
-export const publicClient = createPublicClient({ chain: bscTestnet, transport: http(RPC, { retryCount: 2 }) });
+export const publicClient = createPublicClient({ chain: bscTestnet, transport: transport() });
 
 export type ReceiptView = {
   id: number;
@@ -196,7 +205,7 @@ export function anchorReceipt(a: AnchorArgs): Promise<{ txHash: Hex; id: number 
     if (!rawPk) throw new Error("Relayer not configured");
     const pk = (rawPk.startsWith("0x") ? rawPk : `0x${rawPk}`) as Hex;
     const account = privateKeyToAccount(pk);
-    const wallet = createWalletClient({ account, chain: bscTestnet, transport: http(RPC) });
+    const wallet = createWalletClient({ account, chain: bscTestnet, transport: transport() });
     const args = {
       marketId: BigInt(a.marketId),
       probabilityBps: a.probabilityBps,
