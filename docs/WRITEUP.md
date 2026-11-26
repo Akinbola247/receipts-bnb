@@ -2,7 +2,7 @@
 
 **Live app:** https://receipts-bnb.vercel.app · **Repo:** https://github.com/Akinbola247/receipts-bnb
 
-**Team:** _names + contacts_
+**Team:** Akinbola Kehinde
 
 ## Problem and audience
 Crypto price calls ("BNB to $1,000 by January") move retail money but are never priced or tracked. **RECEIPTS** is a risk tool for anyone about to act on a call:
