@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { anchorReceipt, isConfigured } from "@/lib/chain";
 import { getSnapshot } from "@/lib/cmc";
 import { detectAsset, normalizeHandle } from "@/lib/assets";
+import { matchMarket } from "@/lib/match";
 import { COURNOT_BASE, redactEvidence, type CournotProbability } from "@/lib/cournot";
 
 export const maxDuration = 60;
@@ -59,6 +60,10 @@ export async function POST(req: Request) {
   if (parsed.code !== 0 || typeof p !== "number" || p < 0 || p > 1 || !market) {
     return NextResponse.json({ error: "Evidence is not a successful Cournot probability response" }, { status: 400 });
   }
+
+  // 1b) The market must actually price THIS call (same asset & direction; exact threshold or an easier one = upper bound).
+  const match = matchMarket(claim, [market]);
+  if (!match.ok) return NextResponse.json({ error: `That market doesn't price this call: ${match.reason}` }, { status: 422 });
 
   // 2) Independent integrity check: the market must really exist on Cournot (free resolve endpoint).
   try {

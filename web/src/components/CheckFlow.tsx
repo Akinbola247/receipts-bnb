@@ -9,6 +9,13 @@ import { detectAsset, EXAMPLE_CALLS, normalizeHandle } from "@/lib/assets";
 import { contextNotes, VERDICTS, verdictFor } from "@/lib/verdict";
 import { pct, signed, usd } from "@/lib/format";
 import { ReceiptSlip, type SlipData } from "./ReceiptSlip";
+import { matchMarket, modeLabel, type MatchMode } from "@/lib/match";
+
+type XPost = { url: string; handle: string; name: string; avatar: string | null; text: string; postedAt: number | null };
+
+function cleanTweet(t: string) {
+  return t.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 280);
+}
 
 type Snapshot = {
   asset: string;
@@ -64,6 +71,11 @@ export function CheckFlow({
   const [raw, setRaw] = useState<string>("");
   const [fromCache, setFromCache] = useState<{ id: number; txHash: string } | null>(null);
   const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [mode, setMode] = useState<{ mode: MatchMode; target: number | null } | null>(null);
+  const [xUrl, setXUrl] = useState("");
+  const [xPost, setXPost] = useState<XPost | null>(null);
+  const [xBusy, setXBusy] = useState(false);
+  const [xErr, setXErr] = useState("");
   const [anchored, setAnchored] = useState<{ id: number; txHash: string } | null>(null);
   const [createdAt, setCreatedAt] = useState(() => Math.floor(Date.now() / 1000));
   const resultRef = useRef<HTMLDivElement>(null);
@@ -73,6 +85,28 @@ export function CheckFlow({
   }, []);
 
   const set = (k: StepKey, s: StepState) => setSteps((p) => ({ ...p, [k]: s }));
+
+  async function importX(link: string) {
+    const u = link.trim();
+    if (!u) return;
+    setXBusy(true);
+    setXErr("");
+    try {
+      const r = await fetch(`/api/xpost?url=${encodeURIComponent(u)}`);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Couldn't import that post");
+      setXPost(j);
+      setClaim(cleanTweet(j.text));
+      setCaller(j.handle);
+      setSourceUrl(j.url);
+      if (j.postedAt) setPostedAt(new Date(j.postedAt * 1000).toISOString().slice(0, 10));
+    } catch (e) {
+      setXErr((e as Error).message);
+      setXPost(null);
+    } finally {
+      setXBusy(false);
+    }
+  }
 
   async function run(forcedMarket?: CournotMarket) {
     const c = claim.trim();
@@ -90,13 +124,16 @@ export function CheckFlow({
     setSteps({ resolve: "run", odds: "idle", market: "idle", anchor: "idle" });
 
     try {
-      // 1. resolve
-      let pick = forcedMarket ?? null;
-      if (!pick) {
-        const ms = await resolveMarkets(c, 5);
-        setMarkets(ms);
-        pick = ms[0];
+      // 1. resolve + honest matching (never price a different bet than the one called)
+      const pool = forcedMarket ? [forcedMarket] : await resolveMarkets(c, 10);
+      if (!forcedMarket) setMarkets(pool);
+      const m = matchMarket(c, pool);
+      if (!m.ok) {
+        setMarkets(m.closest);
+        throw new CournotError("no_market", m.reason);
       }
+      const pick = m.market;
+      setMode({ mode: m.mode, target: m.marketTarget });
       setMarket(pick);
       set("resolve", "done");
 
@@ -185,6 +222,7 @@ export function CheckFlow({
           evidenceHash,
           txHash: anchored?.txHash,
           pending: steps.anchor === "run",
+          bound: mode?.mode === "bound",
         }
       : null;
 
@@ -206,8 +244,49 @@ export function CheckFlow({
       <div className="card relative overflow-hidden p-2">
         <div className="absolute inset-x-0 -top-24 h-48 glow-bnb opacity-60" />
         <div className="relative rounded-[14px] bg-ink-2/80 p-5 sm:p-6">
-          <label className="font-mono text-[11px] tracking-[0.25em] text-white/45">THE CALL</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-ink px-4 py-2.5 focus-within:border-bnb/60">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-white/60" aria-hidden>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              <input
+                value={xUrl}
+                onChange={(e) => setXUrl(e.target.value)}
+                onPaste={(e) => {
+                  const t = e.clipboardData.getData("text");
+                  if (/(x|twitter)\.com\/.+\/status\//i.test(t)) setTimeout(() => importX(t), 0);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && importX(xUrl)}
+                placeholder="Paste an X post link to import the call, author and date"
+                className="min-w-0 flex-1 bg-transparent font-mono text-sm outline-none placeholder:text-white/30"
+              />
+            </div>
+            <button onClick={() => importX(xUrl)} disabled={xBusy || !xUrl.trim()} className="btn-ghost px-5 py-2.5 text-sm text-white/80 disabled:opacity-40">
+              {xBusy ? "Importing…" : "Import post"}
+            </button>
+          </div>
+          {xErr && <div className="mt-2 text-xs text-bad">{xErr}</div>}
+          <AnimatePresence>
+            {xPost && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3 flex gap-3 rounded-xl border border-line bg-white/[0.03] p-3.5">
+                {xPost.avatar && <img src={xPost.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full" />}
+                <div className="min-w-0 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-2 text-white/85">
+                    <b>{xPost.name}</b> <span className="font-mono text-xs text-white/45">{xPost.handle}</span>
+                    {xPost.postedAt && <span className="font-mono text-xs text-white/35">· {new Date(xPost.postedAt * 1000).toISOString().slice(0, 10)}</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-3 text-white/65">{xPost.text}</p>
+                  <div className="mt-1 font-mono text-[10.5px] text-good">✓ imported: call, author, link and date filled in below (edit if needed)</div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <label htmlFor="call-input" className="mt-5 block font-mono text-[11px] tracking-[0.25em] text-white/45">
+            OR TYPE ANY CALL
+          </label>
           <textarea
+            id="call-input"
             value={claim}
             onChange={(e) => setClaim(e.target.value)}
             onKeyDown={(e) => {
@@ -215,8 +294,8 @@ export function CheckFlow({
             }}
             rows={2}
             maxLength={280}
-            placeholder="“BNB will be above $700 before December 1st”"
-            className="mt-2 w-full resize-none bg-transparent text-2xl font-semibold leading-snug text-white outline-none placeholder:text-white/25 sm:text-3xl"
+            placeholder="e.g. STRK will hit $5 by December"
+            className="mt-2 w-full resize-none rounded-xl border border-line bg-ink px-4 py-3 text-xl font-semibold leading-snug text-white caret-bnb outline-none transition placeholder:font-normal placeholder:text-white/25 focus:border-bnb/70 focus:shadow-[0_0_0_4px_rgba(240,185,11,0.12)] sm:text-2xl"
           />
           <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center">
             <div className="flex flex-1 items-center gap-2 rounded-full border border-line bg-ink px-4 py-2.5">
@@ -261,7 +340,7 @@ export function CheckFlow({
             </button>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] text-white/35">TRY</span>
+            <span className="font-mono text-[11px] text-white/35">OR TRY AN EXAMPLE</span>
             {EXAMPLE_CALLS.map((ex) => (
               <button
                 key={ex.claim}
@@ -343,10 +422,22 @@ export function CheckFlow({
               </p>
             )}
             {error.kind === "no_market" && (
-              <p className="mt-1 text-white/65">
-                Cournot covers crypto price events. Make the call specific: an asset, a price and a date, e.g. “BTC above $100k by end of
-                2026”.
-              </p>
+              <div className="mt-1 text-white/65">
+                <p>
+                  We only print a receipt when a live prediction market actually prices the call (or an easier version of it that bounds
+                  the odds). We won&apos;t pass off a different bet&apos;s odds as yours.
+                </p>
+                {markets.length > 0 && (
+                  <div className="mt-3">
+                    <div className="font-mono text-[11px] text-white/40">CLOSEST LIVE MARKETS (NOT THE SAME CALL)</div>
+                    <ul className="mt-1.5 space-y-1 font-mono text-xs">
+                      {markets.slice(0, 3).map((m) => (
+                        <li key={m.market_info.id}>· {m.market_info.title}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
           </motion.div>
         )}
@@ -390,9 +481,19 @@ export function CheckFlow({
                     <span className="text-5xl font-extrabold" style={{ color: VERDICTS[verdict].color }}>
                       {VERDICTS[verdict].label}
                     </span>
-                    <span className="font-mono text-white/55">{pct(bps, 1)} market-implied probability</span>
+                    <span className="font-mono text-white/55">
+                      {mode?.mode === "bound" ? "≤ " : ""}
+                      {pct(bps, 1)} market-implied probability
+                    </span>
                   </div>
                   <p className="mt-3 text-lg text-white/85">{VERDICTS[verdict].action}</p>
+                  {mode && (
+                    <p
+                      className={`mt-3 rounded-lg px-3 py-2 text-xs ${mode.mode === "exact" ? "bg-good/10 text-good" : "bg-[#5ac8fa]/10 text-[#5ac8fa]"}`}
+                    >
+                      {modeLabel(mode.mode, mode.target)}
+                    </p>
+                  )}
                   {odds.data.free_quota && (
                     <p className="mt-3 font-mono text-[11px] text-white/35">
                       {odds.data.free_quota.remaining} free Cournot checks left in the shared quota

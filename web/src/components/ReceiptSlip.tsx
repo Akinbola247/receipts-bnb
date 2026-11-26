@@ -22,6 +22,7 @@ export type SlipData = {
   txHash?: string;
   outcome?: "PENDING" | "HIT" | "MISS";
   pending?: boolean;
+  bound?: boolean;
 };
 
 const container: Variants = {
@@ -122,9 +123,15 @@ export function ReceiptSlip({ data, print = false, compact = false }: { data: Sl
           <motion.div variants={line} className="flex items-end justify-between">
             <span className="text-[12px] uppercase tracking-widest text-paper-ink/70">Market odds</span>
             <span className={`font-sans font-extrabold leading-none ${compact ? "text-4xl" : "text-6xl"}`} style={{ color: v.ink }}>
+              {data.bound ? "≤" : ""}
               {pct(data.probabilityBps)}
             </span>
           </motion.div>
+          {data.bound && (
+            <motion.div variants={line} className="text-right text-[10.5px] uppercase tracking-wider text-paper-ink/55">
+              upper bound · via easier market
+            </motion.div>
+          )}
           <motion.div variants={line} className="h-2 overflow-hidden rounded-full bg-paper-ink/10">
             <motion.div
               className="h-full rounded-full"

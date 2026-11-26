@@ -25,15 +25,74 @@ const ALIASES: Record<string, string> = {
   SUI: "SUI",
   HYPE: "HYPE",
   PEPE: "PEPE",
+  STRK: "STRK",
+  STARKNET: "STRK",
+  ARB: "ARB",
+  ARBITRUM: "ARB",
+  OP: "OP",
+  OPTIMISM: "OP",
+  APT: "APT",
+  APTOS: "APT",
+  NEAR: "NEAR",
+  DOT: "DOT",
+  POLKADOT: "DOT",
+  LTC: "LTC",
+  LITECOIN: "LTC",
+  BCH: "BCH",
+  SHIB: "SHIB",
+  WIF: "WIF",
+  BONK: "BONK",
+  TRUMP: "TRUMP",
+  TIA: "TIA",
+  CELESTIA: "TIA",
+  INJ: "INJ",
+  INJECTIVE: "INJ",
+  SEI: "SEI",
+  ENA: "ENA",
+  ETHENA: "ENA",
+  AAVE: "AAVE",
+  UNI: "UNI",
+  UNISWAP: "UNI",
+  ZEC: "ZEC",
+  ZCASH: "ZEC",
+  XLM: "XLM",
+  STELLAR: "XLM",
+  HBAR: "HBAR",
+  HEDERA: "HBAR",
+  MATIC: "POL",
+  POL: "POL",
+  POLYGON: "POL",
+  TAO: "TAO",
+  BITTENSOR: "TAO",
+  ONDO: "ONDO",
+  PAXG: "PAXG",
+  XAUT: "XAUT",
+  GOLD: "PAXG",
+  ASTER: "ASTER",
 };
+
+const STOP = new Set(["THE", "WILL", "HIT", "BY", "TO", "AND", "FOR", "THIS", "YEAR", "END", "OF", "BEFORE", "AFTER", "ABOVE", "BELOW", "USD", "PRICE", "IN", "ON", "AT", "IS", "A", "IT", "MY", "ALL", "ATH", "NEW", "DEC", "JAN", "Q1", "Q2", "Q3", "Q4", "EOY", "NOT", "NFA", "DYOR", "GM", "WAGMI", "NGMI", "SOON", "BULL", "BEAR", "RUN", "MOON", "PUMP", "DUMP", "SEND", "IT", "CRYPTO", "COIN", "TOKEN", "UP", "DOWN"]);
+
+/** Every name a market title might use for an asset (ticker + long names). */
+export function assetNames(asset: string): string[] {
+  const names = Object.entries(ALIASES)
+    .filter(([, v]) => v === asset)
+    .map(([k]) => k);
+  return [...new Set([asset, ...names])];
+}
 
 /** Detect the asset a claim is about. Defaults to BNB (we're on BNB Chain). */
 export function detectAsset(claim: string): string {
-  const words = claim.toUpperCase().replace(/[^A-Z0-9$ ]/g, " ").split(/\s+/);
+  const words = claim.toUpperCase().replace(/[^A-Z0-9$ ]/g, " ").split(/\s+/).filter(Boolean);
   for (const w of words) {
     const k = w.replace(/^\$/, "");
     if (ALIASES[k]) return ALIASES[k];
   }
+  // unknown project: an explicit $TICKER (cashtag) wins, otherwise the first ticker-looking word
+  const cash = claim.match(/\$([A-Za-z][A-Za-z0-9]{1,9})\b/);
+  if (cash) return cash[1].toUpperCase();
+  const tick = words.find((w) => /^[A-Z][A-Z0-9]{1,9}$/.test(w) && !STOP.has(w));
+  if (tick) return tick;
   return "BNB";
 }
 
