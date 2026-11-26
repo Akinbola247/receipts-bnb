@@ -2,7 +2,9 @@
 
 **Paste any crypto price call. RECEIPTS prices it against live prediction markets (Cournot Intelligence Oracle), adds live CoinMarketCap context, tells you what to do, and anchors a permanent, tamper-proof receipt on BNB Chain, tied to whoever made the call.**
 
-> Built at **BNB Bangkok 2026** · Developer Track (on-chain AI agents) · CoinMarketCap × Atlas Challenge · Cournot Intelligence Oracle
+> Built at **BNB Bangkok 2026** by Akinbola Kehinde · Developer Track (on-chain AI agents) · CoinMarketCap × Atlas Challenge · Cournot Intelligence Oracle
+>
+> 📄 Detailed write-up: [docs/WRITEUP.md](docs/WRITEUP.md)
 
 - **Live app:** https://receipts-bnb.vercel.app
 - **Diamond (BSC Testnet, chainId 97):** [`0xcAe4378872F3072A11489A69Fe075681701aed0B`](https://testnet.bscscan.com/address/0xcAe4378872F3072A11489A69Fe075681701aed0B) · source verified ([Sourcify, exact match](https://repo.sourcify.dev/97/0xcAe4378872F3072A11489A69Fe075681701aed0B))
@@ -91,7 +93,7 @@ One permanent address, upgradeable facets, **namespaced diamond storage** (`kecc
 | ReceiptsInit | `0x4d7C4DE4Fd8849041f881E3552Ad98aea65291AB` |
 | SourceFacet (upgrade 1) | `0x21EC0B60Ba73915c5d2ff8F92F694A2Be9Ff3248` · cut tx `0x4d2bcc75…68cdcf` |
 
-First receipts: [#0](https://testnet.bscscan.com/tx/0x81d51e13a04954466c11a85659741a2a167d0191f13babee045e273277ee95ad) and [#1](https://testnet.bscscan.com/tx/0xe7abd8273b4459a93580965b1cb60e38e2bed4a7a5a8b6026e8b2ae2acbaa072).
+Example receipts: [#0](https://testnet.bscscan.com/tx/0x81d51e13a04954466c11a85659741a2a167d0191f13babee045e273277ee95ad) (first receipt), [#5](https://testnet.bscscan.com/tx/0xb422859a684b42131a068a19e85c64c882245b73400d66ca428f52c63369b22d) (Standard Chartered, sourced), [#11](https://testnet.bscscan.com/tx/0x560f3e332433e17a82c3e9d88d462b5213a5d3ea8924662a51309cde44b9d259) (Tom Lee, sourced, upper bound).
 
 **Tests:** `cd contracts && forge test`. **25 tests** (21 core + 4 for the SourceFacet upgrade path), including fuzzing, cover: loupe and ERC-165, unknown selectors, re-init guard, **upgrade keeps receipts** (replace with `LedgerFacetV2`), function removal, owner-only cuts, anchoring and indexes, batch, attester and pause guards, input validation, **EIP-712 permissionless submit / replay / expiry / wrong signer / tampered payload**, alpha math, settle timing and double-settle, `settleMarket`, and a fuzzed verdict-threshold invariant.
 
@@ -143,6 +145,8 @@ A market prices one specific event ("STRK above $0.30 before 2027"); a call is o
 **Where users see the claim and evidence.**
 - `/check`: the panel "Claim evaluated by Cournot" shows the market title and id, the probability, the end time, and every `basis` item (source, summary, time, link). The panel "What to do about it" is explicitly badged **"ADDED BY RECEIPTS · NOT FROM COURNOT"**.
 - `/r/[id]`: the same evidence, re-read from the on-chain event log and verifiable in the browser.
+
+**Same API as the official Skill.** The calls use the exact base URL (`https://interface.cournot.ai`), paths (`intelligence/v1/resolve`, `intelligence/v1/probability`) and `COURNOT-API-KEY` header that the official Cournot Intelligence Oracle Skill's client (`cournot-skills/skills/cournot/scripts/cournot-client.mjs`) uses.
 
 **Proof of a successful call.** See [`proof/`](proof/):
 - `proof/cournot-probability-response.json`: a live `/probability` response for market **#112834** ("BNB price above $685.00 at 2026-11-27 22:00 UTC") → `probability: 0.04`, with Kalshi, Binance, venues and forecast basis (IP redacted).
