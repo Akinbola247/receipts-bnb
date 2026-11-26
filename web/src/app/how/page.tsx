@@ -21,6 +21,7 @@ const FACET_BY_FN: Record<string, { name: string; role: string }> = {
   settle: { name: "SettlementFacet", role: "Resolve markets, update caller alpha" },
   latest: { name: "LedgerFacet", role: "Read path: pages, callers, markets, evidence verification" },
   setAttester: { name: "AdminFacet", role: "Attester registry, circuit breaker, EIP-712 domain" },
+  anchorWithSource: { name: "SourceFacet", role: "Provenance: original post URL + date, write-once (added by live upgrade)" },
 };
 
 function label(f: FacetInfo) {
@@ -97,6 +98,45 @@ export default async function HowPage() {
           </Reveal>
         ))}
       </div>
+
+      {/* intake */}
+      <Reveal>
+        <div className="mt-20">
+          <div className="font-mono text-xs tracking-[0.3em] text-bnb">HOW CALLS GET ON THE RECORD</div>
+          <h2 className="mt-3 text-3xl font-bold md:text-5xl">Three ways in, one pipeline.</h2>
+        </div>
+      </Reveal>
+      <div className="mt-8 grid gap-5 md:grid-cols-3">
+        {[
+          {
+            t: "1 · Anyone, on /check",
+            d: "Paste the call, the @handle and a link to the original post (an X status, video, article or Telegram message) plus its date. No wallet, no gas.",
+          },
+          {
+            t: "2 · Curated batch import",
+            d: "scripts/seed-calls.mjs takes a JSON list of verified public calls (claim, author, source URL, post date) and runs each one through the exact same pipeline. That's how the ledger was seeded with real calls.",
+          },
+          {
+            t: "3 · Permissionless, on-chain",
+            d: "Any wallet can land an attester-signed receipt with anchorWithSig (EIP-712). Provenance is written by SourceFacet.anchorWithSource: an https:// URL plus post date, write-once, so no one can swap the source later.",
+          },
+        ].map((x, i) => (
+          <Reveal key={x.t} delay={i * 0.06}>
+            <div className="card h-full p-7">
+              <div className="text-lg font-bold">{x.t}</div>
+              <p className="mt-3 text-sm leading-relaxed text-white/55">{x.d}</p>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+      <Reveal>
+        <div className="card mt-5 p-6 font-mono text-xs leading-relaxed text-white/60">
+          call + author + source URL → <span className="text-bnb">Cournot /resolve</span> (market match) →{" "}
+          <span className="text-bnb">Cournot /probability</span> (odds + evidence) → <span className="text-bnb">CoinMarketCap</span> (price, F&amp;G) →
+          server validation (shape, market re-verified, IP redacted, https source) →{" "}
+          <span className="text-bnb">SourceFacet.anchorWithSource</span> → ReceiptAnchored + SourceLinked events → ledger, caller record, explorer
+        </div>
+      </Reveal>
 
       {/* diamond */}
       <Reveal>

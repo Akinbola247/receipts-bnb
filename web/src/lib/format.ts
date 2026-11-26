@@ -29,3 +29,26 @@ export function stamp(unix: number) {
 export function receiptNo(id: number) {
   return `#${String(id).padStart(6, "0")}`;
 }
+
+export function sourceLabel(url: string): { host: string; platform: string } {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "").replace(/^mobile\./, "");
+    const platform =
+      h === "x.com" || h === "twitter.com"
+        ? "X post"
+        : h.includes("youtube.com") || h === "youtu.be"
+          ? "Video"
+          : h === "t.me"
+            ? "Telegram"
+            : h.includes("linkedin.com")
+              ? "LinkedIn"
+              : "Article";
+    return { host: h, platform };
+  } catch {
+    return { host: "source", platform: "Source" };
+  }
+}
+
+export function day(unix: number) {
+  return new Date(unix * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}

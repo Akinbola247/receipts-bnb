@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   if (limited(ip)) return NextResponse.json({ error: "Slow down — max 6 receipts a minute." }, { status: 429 });
 
-  let body: { claim?: string; caller?: string; raw?: string; marketId?: number };
+  let body: { claim?: string; caller?: string; raw?: string; marketId?: number; sourceUrl?: string; postedAt?: string | number };
   try {
     body = await req.json();
   } catch {
@@ -29,6 +29,21 @@ export async function POST(req: Request) {
   const claim = (body.claim ?? "").trim().slice(0, 280);
   const caller = normalizeHandle(body.caller ?? "");
   const raw = redactEvidence(body.raw ?? "");
+  // Provenance: optional link to the original post (stored write-once on-chain by SourceFacet).
+  let sourceUrl: string | undefined;
+  let postedAt = 0;
+  if (body.sourceUrl && String(body.sourceUrl).trim()) {
+    try {
+      const u = new URL(String(body.sourceUrl).trim());
+      if (u.protocol !== "https:") throw new Error();
+      u.hash = "";
+      sourceUrl = u.toString().slice(0, 300);
+    } catch {
+      return NextResponse.json({ error: "Source must be an https:// link to the original post" }, { status: 400 });
+    }
+    const t = typeof body.postedAt === "number" ? body.postedAt : Date.parse(String(body.postedAt ?? "")) / 1000;
+    postedAt = Number.isFinite(t) && t > 0 ? Math.min(Math.floor(t), Math.floor(Date.now() / 1000) - 60) : 0;
+  }
   if (claim.length < 6) return NextResponse.json({ error: "Claim is too short" }, { status: 400 });
   if (!raw || raw.length > 16_000) return NextResponse.json({ error: "Missing or oversized Cournot evidence" }, { status: 400 });
 
@@ -81,6 +96,8 @@ export async function POST(req: Request) {
       asset: snap.asset,
       claim,
       evidenceJson: raw,
+      sourceUrl,
+      postedAt,
     });
     return NextResponse.json({ id, txHash, snapshot: snap });
   } catch (e) {

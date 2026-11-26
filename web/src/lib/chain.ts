@@ -37,6 +37,7 @@ export type ReceiptView = {
   caller: string;
   asset: string;
   claim: string;
+  source?: { url: string; postedAt: number } | null;
 };
 
 const OUTCOMES = ["PENDING", "HIT", "MISS"] as const;
@@ -82,7 +83,23 @@ export async function getLatest(offset = 0, limit = 30): Promise<ReceiptView[]> 
     functionName: "latest",
     args: [BigInt(offset), BigInt(limit)],
   })) as [any[], bigint[]];
-  return rows.map((r, i) => toView(ids[i], r));
+  return attachSources(rows.map((r, i) => toView(ids[i], r)));
+}
+
+/** Provenance lives in SourceFacet (added by a live diamondCut). One batched call per page. */
+export async function attachSources(rows: ReceiptView[]): Promise<ReceiptView[]> {
+  if (!rows.length) return rows;
+  try {
+    const src = (await publicClient.readContract({
+      address: REGISTRY,
+      abi: registryAbi,
+      functionName: "sourcesOf",
+      args: [rows.map((r) => BigInt(r.id))],
+    })) as any[];
+    return rows.map((r, i) => ({ ...r, source: src[i]?.url ? { url: src[i].url, postedAt: Number(src[i].postedAt) } : null }));
+  } catch {
+    return rows;
+  }
 }
 
 export async function getReceipt(id: number): Promise<ReceiptView | null> {
@@ -94,7 +111,7 @@ export async function getReceipt(id: number): Promise<ReceiptView | null> {
       functionName: "getReceipt",
       args: [BigInt(id)],
     });
-    return toView(id, r);
+    return (await attachSources([toView(id, r)]))[0];
   } catch {
     return null;
   }
@@ -196,6 +213,8 @@ export type AnchorArgs = {
   asset: string;
   claim: string;
   evidenceJson: string;
+  sourceUrl?: string;
+  postedAt?: number;
 };
 
 /** Serialised so concurrent requests never collide on nonces. */
@@ -217,13 +236,16 @@ export function anchorReceipt(a: AnchorArgs): Promise<{ txHash: Hex; id: number 
       claim: a.claim,
       evidenceJson: a.evidenceJson,
     } as const;
-    const { request, result } = await publicClient.simulateContract({
-      account,
-      address: REGISTRY,
-      abi: registryAbi,
-      functionName: "anchor",
-      args: [args],
-    });
+    const sim = a.sourceUrl
+      ? publicClient.simulateContract({
+          account,
+          address: REGISTRY,
+          abi: registryAbi,
+          functionName: "anchorWithSource",
+          args: [args, a.sourceUrl, BigInt(a.postedAt ?? 0)],
+        })
+      : publicClient.simulateContract({ account, address: REGISTRY, abi: registryAbi, functionName: "anchor", args: [args] });
+    const { request, result } = (await sim) as any;
     const txHash = await wallet.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
     return { txHash, id: Number(result) };

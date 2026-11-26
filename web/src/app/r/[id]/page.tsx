@@ -6,7 +6,7 @@ import { VerifyEvidence } from "@/components/VerifyEvidence";
 import { Reveal } from "@/components/Motion";
 import { VerdictPill } from "@/components/ReceiptCard";
 import { VERDICTS, contextNotes } from "@/lib/verdict";
-import { pct, receiptNo, stamp } from "@/lib/format";
+import { day, pct, receiptNo, sourceLabel, stamp } from "@/lib/format";
 import type { CournotProbability } from "@/lib/cournot";
 
 export const revalidate = 30;
@@ -68,6 +68,34 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                 {pct(r.probabilityBps, 1)}
               </span>
             </p>
+          </Reveal>
+
+          <Reveal>
+            {r.source ? (
+              <a
+                href={r.source.url}
+                target="_blank"
+                rel="noreferrer nofollow"
+                className="card group flex items-center justify-between gap-4 p-5 transition hover:border-bnb/50"
+              >
+                <div className="min-w-0">
+                  <div className="font-mono text-[11px] tracking-widest text-white/40">
+                    ORIGINAL {sourceLabel(r.source.url).platform.toUpperCase()} · PROVENANCE ON-CHAIN (SOURCEFACET)
+                  </div>
+                  <div className="mt-1.5 truncate font-mono text-sm text-bnb group-hover:underline">{r.source.url}</div>
+                  {r.source.postedAt > 0 && (
+                    <div className="mt-1 text-xs text-white/45">
+                      Posted {day(r.source.postedAt)} · receipt printed {Math.max(0, Math.round((r.createdAt - r.source.postedAt) / 86400))} days later
+                    </div>
+                  )}
+                </div>
+                <span className="btn-bnb shrink-0 px-4 py-2 text-sm">View post ↗</span>
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-white/45">
+                Community submission: no link to an original post was attached to this receipt.
+              </div>
+            )}
           </Reveal>
 
           {parsed && (
@@ -133,7 +161,17 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               </p>
               <div className="mt-4 space-y-2 font-mono text-xs">
                 <Row k="diamond" v={<a className="text-bnb hover:underline" target="_blank" rel="noreferrer" href={`${EXPLORER}/address/${REGISTRY}`}>{REGISTRY} ↗</a>} />
-                {ev && <Row k="transaction" v={<a className="text-bnb hover:underline" target="_blank" rel="noreferrer" href={`${EXPLORER}/tx/${ev.txHash}`}>{ev.txHash} ↗</a>} />}
+                {ev && (
+                  <Row
+                    k="transaction"
+                    v={
+                      <span>
+                        <Link className="text-bnb hover:underline" href={`/explorer/tx/${ev.txHash}`}>{ev.txHash}</Link>{" "}
+                        <a className="text-white/40 hover:text-white" target="_blank" rel="noreferrer" href={`${EXPLORER}/tx/${ev.txHash}`}>BscScan ↗</a>
+                      </span>
+                    }
+                  />
+                )}
                 <Row k="block" v={String(r.blockNumber)} />
                 <Row k="attester" v={r.attester} />
                 <Row k="evidence hash" v={r.evidenceHash} />

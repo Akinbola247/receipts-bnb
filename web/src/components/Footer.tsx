@@ -27,6 +27,7 @@ export function Footer() {
             <li><Link className="hover:text-white" href="/ledger">Public ledger</Link></li>
             <li><Link className="hover:text-white" href="/hall">Hall of Hype</Link></li>
             <li><Link className="hover:text-white" href="/how">How it works &amp; verify</Link></li>
+            <li><Link className="hover:text-white" href="/explorer">On-chain explorer</Link></li>
           </ul>
         </div>
         <div className="text-sm">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReceiptView } from "@/lib/chain";
 import { VERDICTS } from "@/lib/verdict";
-import { ago, pct, receiptNo, usd } from "@/lib/format";
+import { ago, day, pct, receiptNo, sourceLabel, usd } from "@/lib/format";
 
 export function VerdictPill({ verdict, className = "" }: { verdict: keyof typeof VERDICTS; className?: string }) {
   const v = VERDICTS[verdict];
@@ -29,6 +29,16 @@ export function ReceiptCard({ r }: { r: ReceiptView }) {
         <VerdictPill verdict={r.verdict} />
       </div>
       <p className="mt-4 line-clamp-3 text-[17px] font-semibold leading-snug text-white/90">&ldquo;{r.claim}&rdquo;</p>
+      {r.source ? (
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1 font-mono text-[10.5px] text-white/55">
+          <span className="text-good">●</span> {sourceLabel(r.source.url).platform} · {sourceLabel(r.source.url).host}
+          {r.source.postedAt ? ` · ${day(r.source.postedAt)}` : ""}
+        </div>
+      ) : (
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] text-white/30 ring-1 ring-white/10">
+          community submission · no source
+        </div>
+      )}
       <div className="mt-5 flex items-end justify-between">
         <div>
           <div className="font-mono text-xs text-bnb">{r.caller}</div>

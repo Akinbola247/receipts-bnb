@@ -3,7 +3,7 @@ import { Reveal } from "@/components/Motion";
 
 export const metadata = { title: "Check a call — RECEIPTS" };
 
-export default async function CheckPage({ searchParams }: { searchParams: Promise<{ q?: string; by?: string }> }) {
+export default async function CheckPage({ searchParams }: { searchParams: Promise<{ q?: string; by?: string; src?: string; at?: string }> }) {
   const sp = await searchParams;
   return (
     <div className="relative">
@@ -18,7 +18,7 @@ export default async function CheckPage({ searchParams }: { searchParams: Promis
           </p>
         </Reveal>
         <div className="mt-10">
-          <CheckFlow initialClaim={sp.q ?? ""} initialCaller={sp.by ?? ""} />
+          <CheckFlow initialClaim={sp.q ?? ""} initialCaller={sp.by ?? ""} initialSource={sp.src ?? ""} initialPosted={sp.at ?? ""} />
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { VERDICT_ORDER, VERDICTS, type VerdictKey } from "@/lib/verdict";
 export const revalidate = 10;
 export const metadata = { title: "Ledger — RECEIPTS" };
 
-export default async function LedgerPage({ searchParams }: { searchParams: Promise<{ v?: string; page?: string }> }) {
+export default async function LedgerPage({ searchParams }: { searchParams: Promise<{ v?: string; page?: string; src?: string }> }) {
   const sp = await searchParams;
   const page = Math.max(0, Number(sp.page ?? 0) || 0);
   const PER = 24;
@@ -16,7 +16,9 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     getTotals().catch(() => ({ receipts: 0, callers: 0 })),
   ]);
   const filter = VERDICT_ORDER.includes(sp.v as VerdictKey) ? (sp.v as VerdictKey) : null;
-  const shown = filter ? rows.filter((r) => r.verdict === filter) : rows;
+  const sourcedOnly = sp.src === "1";
+  const shown = (filter ? rows.filter((r) => r.verdict === filter) : rows).filter((r) => !sourcedOnly || r.source);
+  const sourcedCount = rows.filter((r) => r.source).length;
   const counts = VERDICT_ORDER.map((k) => ({ k, n: rows.filter((r) => r.verdict === k).length }));
 
   return (
@@ -42,6 +44,12 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       <div className="mt-8 flex flex-wrap gap-2">
         <Link href="/ledger" className={`rounded-full px-4 py-2 text-sm ${!filter ? "bg-white text-ink" : "btn-ghost text-white/70"}`}>
           All <span className="opacity-60">{rows.length}</span>
+        </Link>
+        <Link
+          href={sourcedOnly ? "/ledger" : "/ledger?src=1"}
+          className={`rounded-full px-4 py-2 text-sm ${sourcedOnly ? "bg-[#5ac8fa] text-ink" : "btn-ghost text-white/70"}`}
+        >
+          ● With original post <span className="opacity-60">{sourcedCount}</span>
         </Link>
         {counts.map(({ k, n }) => (
           <Link

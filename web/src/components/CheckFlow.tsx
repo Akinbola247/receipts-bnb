@@ -38,9 +38,21 @@ const STEPS: { key: StepKey; title: string; sub: string }[] = [
 
 const EXPLORER = "https://testnet.bscscan.com";
 
-export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialClaim?: string; initialCaller?: string }) {
+export function CheckFlow({
+  initialClaim = "",
+  initialCaller = "",
+  initialSource = "",
+  initialPosted = "",
+}: {
+  initialClaim?: string;
+  initialCaller?: string;
+  initialSource?: string;
+  initialPosted?: string;
+}) {
   const [claim, setClaim] = useState(initialClaim);
   const [caller, setCaller] = useState(initialCaller);
+  const [sourceUrl, setSourceUrl] = useState(initialSource);
+  const [postedAt, setPostedAt] = useState(initialPosted);
   const [apiKey, setApiKey] = useState("");
   const [showAdv, setShowAdv] = useState(false);
   const [steps, setSteps] = useState<Record<StepKey, StepState>>({ resolve: "idle", odds: "idle", market: "idle", anchor: "idle" });
@@ -127,7 +139,7 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
       const res = await fetch("/api/anchor", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ claim: c, caller, raw: rawText, marketId: pick.market_info.id }),
+        body: JSON.stringify({ claim: c, caller, raw: rawText, marketId: pick.market_info.id, sourceUrl, postedAt }),
       });
       const j = await res.json();
       if (!res.ok) {
@@ -215,6 +227,27 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
                 placeholder="@handle or x.com link"
                 maxLength={60}
                 className="min-w-0 flex-1 bg-transparent font-mono text-sm text-white outline-none placeholder:text-white/25"
+              />
+            </div>
+          </div>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-1 items-center gap-2 rounded-full border border-line bg-ink px-4 py-2.5">
+              <span className="whitespace-nowrap font-mono text-xs text-white/40">ORIGINAL POST</span>
+              <input
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://x.com/…/status/…  (stored on-chain)"
+                maxLength={300}
+                className="min-w-0 flex-1 bg-transparent font-mono text-sm text-white outline-none placeholder:text-white/25"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-line bg-ink px-4 py-2.5">
+              <span className="font-mono text-xs text-white/40">POSTED</span>
+              <input
+                type="date"
+                value={postedAt}
+                onChange={(e) => setPostedAt(e.target.value)}
+                className="bg-transparent font-mono text-sm text-white outline-none [color-scheme:dark]"
               />
             </div>
             <button onClick={() => run()} disabled={running} className="btn-bnb flex items-center justify-center gap-2 px-7 py-3 text-base">
@@ -484,9 +517,14 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
                       k="transaction"
                       v={
                         anchored ? (
-                          <a className="text-bnb hover:underline" target="_blank" rel="noreferrer" href={`${EXPLORER}/tx/${anchored.txHash}`}>
-                            {anchored.txHash} ↗
-                          </a>
+                          <span>
+                            <Link className="text-bnb hover:underline" href={`/explorer/tx/${anchored.txHash}`}>
+                              {anchored.txHash}
+                            </Link>{" "}
+                            <a className="text-white/40 hover:text-white" target="_blank" rel="noreferrer" href={`${EXPLORER}/tx/${anchored.txHash}`}>
+                              BscScan ↗
+                            </a>
+                          </span>
                         ) : steps.anchor === "run" ? (
                           <span className="text-white/50">broadcasting…</span>
                         ) : (
@@ -495,6 +533,7 @@ export function CheckFlow({ initialClaim = "", initialCaller = "" }: { initialCl
                       }
                     />
                     <KV k="receipt id" v={anchored ? `#${anchored.id}` : "—"} />
+                    <KV k="original post" v={sourceUrl ? sourceUrl : "— (add one to tie the call to its author)"} />
                   </div>
                   <details className="mt-4 rounded-xl border border-line p-3">
                     <summary className="cursor-pointer font-mono text-[11px] text-white/50">Raw Cournot response (exactly what gets hashed)</summary>
