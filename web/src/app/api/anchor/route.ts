@@ -66,16 +66,20 @@ export async function POST(req: Request) {
   if (!match.ok) return NextResponse.json({ error: `That market doesn't price this call: ${match.reason}` }, { status: 422 });
 
   // 2) Independent integrity check: the market must really exist on Cournot (free resolve endpoint).
+  //    Query with both the user's claim (which surfaced it) and the market title; either hit verifies it.
   try {
-    const r = await fetch(`${COURNOT_BASE}/resolve`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message: market.market_info.title, limit: 10 }),
-      signal: AbortSignal.timeout(12_000),
-    });
-    const j = await r.json();
-    const ok = (j?.data?.markets ?? []).some((m: { market_info: { id: number } }) => m.market_info.id === market.market_info.id);
-    if (!ok) return NextResponse.json({ error: "Market could not be verified on Cournot" }, { status: 422 });
+    const lookup = (message: string) =>
+      fetch(`${COURNOT_BASE}/resolve`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message, limit: 10 }),
+        signal: AbortSignal.timeout(12_000),
+      })
+        .then((r) => r.json())
+        .then((j) => (j?.data?.markets ?? []).some((m: { market_info: { id: number } }) => m.market_info.id === market.market_info.id))
+        .catch(() => null);
+    const results = await Promise.all([lookup(claim), lookup(market.market_info.title)]);
+    if (results.every((x) => x === false)) return NextResponse.json({ error: "Market could not be verified on Cournot" }, { status: 422 });
   } catch {
     // Cournot unreachable from server — the evidence hash is still anchored, so this stays auditable.
   }
