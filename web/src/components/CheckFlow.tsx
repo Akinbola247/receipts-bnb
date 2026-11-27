@@ -106,6 +106,7 @@ export function CheckFlow({
     } finally {
       setXBusy(false);
     }
+    
   }
 
   async function run(forcedMarket?: CournotMarket) {
